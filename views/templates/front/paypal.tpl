@@ -46,7 +46,7 @@
  * Create paypal script
  */
 function initPaypalScript() {
-  if (typeof paypal !== 'undefined') {
+  if (typeof paypalSdkPsCheckout !== 'undefined') {
     return;
   }
 
@@ -59,6 +59,7 @@ function initPaypalScript() {
   const paypalScript = document.createElement('script');
   paypalScript.setAttribute('src', "https://www.paypal.com/sdk/js?components=hosted-fields,buttons&client-id={$paypalClientId|escape:'htmlall':'UTF-8'}&merchant-id={$merchantId|escape:'htmlall':'UTF-8'}&intent={$intent|escape:'htmlall':'UTF-8'}&currency={$currencyIsoCode|escape:'htmlall':'UTF-8'}");
   paypalScript.setAttribute('data-client-token', "{$clientToken|escape:'htmlall':'UTF-8'}");
+  paypalScript.setAttribute('data-namespace', 'paypalSdkPsCheckout');
   paypalScript.setAttribute('id', 'paypalSdkPsCheckout');
   paypalScript.setAttribute('async', '');
   document.head.appendChild(paypalScript);
