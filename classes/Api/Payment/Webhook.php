@@ -42,4 +42,22 @@ class Webhook extends PaymentClient
             'json' => $payload,
         ]);
     }
+
+    /**
+     * Check if merchantId is valid
+     *
+     * @param string $merchantId
+     *
+     * @return array
+     */
+    public function verifyMerchantId($merchantId)
+    {
+        $this->setRoute('/payments/shop/verify_merchant_id');
+
+        return $this->post([
+            'json' => [
+                'merchantId' => $merchantId,
+            ],
+        ]);
+    }
 }

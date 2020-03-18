@@ -204,11 +204,23 @@ class ps_checkoutDispatchWebHookModuleFrontController extends ModuleFrontControl
             throw new UnauthorizedException('shopId wrong');
         }
 
-        if ($this->merchantId !== $localMerchantId) {
+        if ($this->merchantId !== $localMerchantId && false === $this->checkMerchantId()) {
             throw new UnauthorizedException('merchantId wrong');
         }
 
         return true;
+    }
+
+    /**
+     * Check if merchant Id is acceptable
+     *
+     * @return bool
+     */
+    private function checkMerchantId()
+    {
+        $response = (new Webhook($this->context->link))->verifyMerchantId($this->merchantId);
+
+        return 200 === $response['httpCode'];
     }
 
     /**
