@@ -75,7 +75,8 @@ class ps_checkoutPaymentCard16ModuleFrontController extends ModuleFrontControlle
                 'PS_CHECKOUT_INTENT',
                 null,
                 null,
-                (int) \Context::getContext()->shop->id
+                (int) \Context::getContext()->shop->id,
+                'CAPTURE'
             )),
             'locale' => $language['locale'],
             'currencyIsoCode' => $this->context->currency->iso_code,

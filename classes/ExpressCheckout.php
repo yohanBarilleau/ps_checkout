@@ -76,7 +76,8 @@ class ExpressCheckout
                 'PS_CHECKOUT_INTENT',
                 null,
                 null,
-                (int) \Context::getContext()->shop->id
+                (int) \Context::getContext()->shop->id,
+                'CAPTURE'
             )),
             'currencyIsoCode' => $this->context->currency->iso_code,
             'isCardPaymentError' => (bool) \Tools::getValue('hferror'),

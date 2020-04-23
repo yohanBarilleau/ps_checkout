@@ -129,7 +129,8 @@ class OrderPayloadBuilder extends Builder implements PayloadBuilderInterface
                 'PS_CHECKOUT_INTENT',
                 null,
                 null,
-                (int) \Context::getContext()->shop->id
+                (int) \Context::getContext()->shop->id,
+                'CAPTURE'
             ), // capture or authorize
             'custom_id' => (string) $this->cart['cart']['id'], // id_cart or id_order // link between paypal order and prestashop order
             'invoice_id' => '',

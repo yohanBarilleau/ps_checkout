@@ -94,7 +94,8 @@ class PaypalAccountRepository
             PaypalAccount::PS_CHECKOUT_CARD_PAYMENT_ENABLED,
             null,
             null,
-            (int) \Context::getContext()->shop->id
+            (int) \Context::getContext()->shop->id,
+            true
         );
     }
 

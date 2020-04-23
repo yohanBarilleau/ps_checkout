@@ -136,119 +136,58 @@ class Ps_checkout extends PaymentModule
      */
     public function install()
     {
-        // Install for both 1.7 and 1.6
-        $defaultInstall = parent::install() &&
-            (new PrestaShop\Module\PrestashopCheckout\ShopUuidManager())->generateForAllShops() &&
-            $this->installConfiguration() &&
-            $this->registerHook(self::HOOK_LIST) &&
-            (new PrestaShop\Module\PrestashopCheckout\OrderStates())->installPaypalStates() &&
-            (new PrestaShop\Module\PrestashopCheckout\Database\TableManager())->createTable() &&
-            $this->installTabs();
-
-        if (!$defaultInstall) {
+        if (false === parent::install()) {
             return false;
         }
 
-        // Install specific to prestashop 1.7
-        if ((new PrestaShop\Module\PrestashopCheckout\ShopContext())->isShop17()) {
-            return $this->registerHook(self::HOOK_LIST_17) &&
-                $this->updatePosition(\Hook::getIdByName('paymentOptions'), false, 1);
+        $installerSteps = [
+            new \PrestaShop\Module\PrestashopCheckout\Module\Step\Installer\InstallerRegisterHooksModuleStep(),
+            new \PrestaShop\Module\PrestashopCheckout\Module\Step\Installer\InstallerHookFirstPositionModuleStep(
+                (new PrestaShop\Module\PrestashopCheckout\ShopContext())->isShop17() ? 'paymentOptions' : 'payment'
+            ),
+            new \PrestaShop\Module\PrestashopCheckout\Module\Step\Installer\InstallerConfigurationModuleStep(),
+            new \PrestaShop\Module\PrestashopCheckout\Module\Step\Installer\InstallerDatabaseModuleStep(),
+            new \PrestaShop\Module\PrestashopCheckout\Module\Step\Installer\InstallAdminControllerModuleStep(),
+            new \PrestaShop\Module\PrestashopCheckout\Module\Step\Installer\InstallGenerateShopUuidModuleStep(
+                new PrestaShop\Module\PrestashopCheckout\ShopUuidManager()
+            ),
+            new \PrestaShop\Module\PrestashopCheckout\Module\Step\Installer\InstallOrderStateModuleStep(),
+        ];
+        $installer = new PrestaShop\Module\PrestashopCheckout\Module\Step\ModuleStepListExecutor($this, $installerSteps);
+
+        if (false === $installer->execute()) {
+            $this->_errors = array_merge($this->_errors, $installer->getErrors());
+
+            return false;
         }
 
-        // Install specific to prestashop 1.6
-        return $this->registerHook(self::HOOK_LIST_16) &&
-            $this->updatePosition(\Hook::getIdByName('payment'), false, 1);
+        return true;
     }
 
     /**
-     * Install configuration for each shop
-     *
-     * @return bool
-     */
-    public function installConfiguration()
-    {
-        $result = true;
-
-        foreach (\Shop::getShops(false, null, true) as $shopId) {
-            foreach ($this->configurationList as $name => $value) {
-                if (false === Configuration::hasKey($name, null, null, (int) $shopId)) {
-                    $result = $result && Configuration::updateValue(
-                        $name,
-                        $value,
-                        false,
-                        null,
-                        (int) $shopId
-                    );
-                }
-            }
-        }
-
-        return $result;
-    }
-
-    /**
-     * This method is often use to create an ajax controller
-     *
-     * @return bool
-     */
-    public function installTabs()
-    {
-        $installTabCompleted = true;
-
-        foreach (static::MODULE_ADMIN_CONTROLLERS as $controllerName) {
-            if (Tab::getIdFromClassName($controllerName)) {
-                continue;
-            }
-
-            $tab = new Tab();
-            $tab->class_name = $controllerName;
-            $tab->active = true;
-            $tab->name = array_fill_keys(
-                Language::getIDs(false),
-                $this->displayName
-            );
-            $tab->id_parent = -1;
-            $tab->module = $this->name;
-            $installTabCompleted = $installTabCompleted && $tab->add();
-        }
-
-        return $installTabCompleted;
-    }
-
-    /**
-     * Function executed at the uninstall of the module
-     *
      * @return bool
      */
     public function uninstall()
     {
-        foreach (array_keys($this->configurationList) as $name) {
-            Configuration::deleteByName($name);
+        $uninstallerSteps = [
+            new \PrestaShop\Module\PrestashopCheckout\Module\Step\Uninstaller\UninstallAdminControllerModuleStep(),
+            new \PrestaShop\Module\PrestashopCheckout\Module\Step\Uninstaller\UninstallerConfigurationModuleStep(),
+            new \PrestaShop\Module\PrestashopCheckout\Module\Step\Uninstaller\UninstallerDatabaseModuleStep(),
+            new \PrestaShop\Module\PrestashopCheckout\Module\Step\Uninstaller\UninstallOrderStateModuleStep(),
+        ];
+        $uninstaller = new PrestaShop\Module\PrestashopCheckout\Module\Step\ModuleStepListExecutor($this, $uninstallerSteps);
+
+        if (false === $uninstaller->execute()) {
+            $this->_errors = array_merge($this->_errors, $uninstaller->getErrors());
+
+            return false;
         }
 
-        return parent::uninstall() &&
-            (new PrestaShop\Module\PrestashopCheckout\Database\TableManager())->dropTable() &&
-            $this->uninstallTabs();
-    }
-
-    /**
-     * uninstall tabs
-     *
-     * @return bool
-     */
-    public function uninstallTabs()
-    {
-        $uninstallTabCompleted = true;
-
-        foreach (static::MODULE_ADMIN_CONTROLLERS as $controllerName) {
-            $id_tab = (int) Tab::getIdFromClassName($controllerName);
-            $tab = new Tab($id_tab);
-            if (Validate::isLoadedObject($tab)) {
-                $uninstallTabCompleted = $uninstallTabCompleted && $tab->delete();
-            }
+        if (false === parent::uninstall()) {
+            return false;
         }
 
-        return $uninstallTabCompleted;
+        return true;
     }
 
     /**
@@ -291,7 +230,8 @@ class Ps_checkout extends PaymentModule
             'PS_CHECKOUT_EC_CHECKOUT_PAGE',
             null,
             null,
-            (int) \Context::getContext()->shop->id
+            (int) \Context::getContext()->shop->id,
+            false
         );
 
         if (!$displayOnCheckout) {
@@ -322,7 +262,8 @@ class Ps_checkout extends PaymentModule
             'PS_CHECKOUT_EC_ORDER_PAGE',
             null,
             null,
-            (int) \Context::getContext()->shop->id
+            (int) \Context::getContext()->shop->id,
+            false
         );
 
         if (!$displayExpressCheckout) {
@@ -344,7 +285,8 @@ class Ps_checkout extends PaymentModule
             'PS_CHECKOUT_EC_PRODUCT_PAGE',
             null,
             null,
-            (int) \Context::getContext()->shop->id
+            (int) \Context::getContext()->shop->id,
+            false
         );
 
         if (!$displayOnProductPage) {
@@ -491,7 +433,8 @@ class Ps_checkout extends PaymentModule
                 'PS_CHECKOUT_INTENT',
                 null,
                 null,
-                (int) \Context::getContext()->shop->id
+                (int) \Context::getContext()->shop->id,
+                'CAPTURE'
             )),
             'locale' => $language['locale'],
             'currencyIsoCode' => $this->context->currency->iso_code,

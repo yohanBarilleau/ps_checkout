@@ -61,25 +61,29 @@ class Shop extends PaymentClient
                         'PS_CHECKOUT_CARD_PAYMENT_ENABLED',
                         null,
                         null,
-                        (int) \Context::getContext()->shop->id
+                        (int) \Context::getContext()->shop->id,
+                        true
                     ),
                     'express_in_product' => (bool) \Configuration::get(
                         'PS_CHECKOUT_EC_PRODUCT_PAGE',
                         null,
                         null,
-                        (int) \Context::getContext()->shop->id
+                        (int) \Context::getContext()->shop->id,
+                        false
                     ),
                     'express_in_cart' => (bool) \Configuration::get(
                         'PS_CHECKOUT_EC_ORDER_PAGE',
                         null,
                         null,
-                        (int) \Context::getContext()->shop->id
+                        (int) \Context::getContext()->shop->id,
+                        false
                     ),
                     'express_in_checkout' => (bool) \Configuration::get(
                         'PS_CHECKOUT_EC_CHECKOUT_PAGE',
                         null,
                         null,
-                        (int) \Context::getContext()->shop->id
+                        (int) \Context::getContext()->shop->id,
+                        false
                     ),
                 ],
             ]),

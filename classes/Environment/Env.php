@@ -87,7 +87,8 @@ class Env
             'PS_CHECKOUT_MODE',
             null,
             null,
-            (int) \Context::getContext()->shop->id
+            (int) \Context::getContext()->shop->id,
+            'LIVE'
         );
 
         if ('LIVE' === $mode) {

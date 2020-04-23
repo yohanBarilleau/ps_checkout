@@ -41,19 +41,22 @@ class ConfigurationModule implements PresenterInterface
                     'PS_CHECKOUT_INTENT',
                     null,
                     null,
-                    (int) \Context::getContext()->shop->id
+                    (int) \Context::getContext()->shop->id,
+                    'CAPTURE'
                 ),
                 'paymentMode' => \Configuration::get(
                     'PS_CHECKOUT_MODE',
                     null,
                     null,
-                    (int) \Context::getContext()->shop->id
+                    (int) \Context::getContext()->shop->id,
+                    'LIVE'
                 ),
                 'cardIsEnabled' => (bool) \Configuration::get(
                     'PS_CHECKOUT_CARD_PAYMENT_ENABLED',
                     null,
                     null,
-                    (int) \Context::getContext()->shop->id
+                    (int) \Context::getContext()->shop->id,
+                    true
                 ),
                 'debugLogsEnabled' => (bool) \Configuration::get(
                     'PS_CHECKOUT_DEBUG_LOGS_ENABLED',
@@ -66,19 +69,22 @@ class ConfigurationModule implements PresenterInterface
                         'PS_CHECKOUT_EC_ORDER_PAGE',
                         null,
                         null,
-                        (int) \Context::getContext()->shop->id
+                        (int) \Context::getContext()->shop->id,
+                        false
                     ),
                     'checkoutPage' => (bool) \Configuration::get(
                         'PS_CHECKOUT_EC_CHECKOUT_PAGE',
                         null,
                         null,
-                        (int) \Context::getContext()->shop->id
+                        (int) \Context::getContext()->shop->id,
+                        false
                     ),
                     'productPage' => (bool) \Configuration::get(
                         'PS_CHECKOUT_EC_PRODUCT_PAGE',
                         null,
                         null,
-                        (int) \Context::getContext()->shop->id
+                        (int) \Context::getContext()->shop->id,
+                        false
                     ),
                 ],
             ],
