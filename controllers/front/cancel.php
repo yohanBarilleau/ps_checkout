@@ -18,6 +18,9 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
  */
 
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+
 /**
  * This controller receive ajax call on customer canceled payment
  */
@@ -35,22 +38,39 @@ class Ps_CheckoutCancelModuleFrontController extends ModuleFrontController
      */
     public function postProcess()
     {
-        $bodyContent = file_get_contents('php://input');
+        try{
+            $request = Request::createFromGlobals();
 
-        if (false === empty($bodyContent)) {
-            $bodyValues = json_decode($bodyContent, true);
+            $orderID = $request->get('orderID');
 
-            if (false === empty($bodyValues['orderID'])) {
-                $this->module->getLogger()->info(sprintf(
-                    'Customer canceled payment - PayPal Order %s',
-                    $bodyValues['orderID']
-                ));
+            if ($orderID === null) {
+                throw new \Exception("orderId cannot be null");
             }
-        }
 
-        //@todo remove cookie
-        $this->context->cookie->__unset('ps_checkout_orderId');
-        $this->context->cookie->__unset('ps_checkout_fundingSource');
+            $this->module->getLogger()->info(sprintf(
+                'Customer canceled payment - PayPal Order %s',
+                $orderID
+            ));
+
+            //@todo remove cookie
+            $this->context->cookie->__unset('ps_checkout_orderId');
+            $this->context->cookie->__unset('ps_checkout_fundingSource');
+
+            $response = new Response(
+                sprintf('The payment  with orderID : %s have been canceled successfully.', $orderID),
+                Response::HTTP_OK,
+                ['content-type' => 'text/html']
+            );
+            $response->send();
+        }
+        catch( \Exception $exception) {
+            $response = new Response(
+                sprintf('An error occurred during the canceled action : %s',$exception->getMessage()),
+                Response::HTTP_INTERNAL_SERVER_ERROR,
+                ['content-type' => 'text/html']
+            );
+            $response->send();
+        }
 
         exit;
     }
