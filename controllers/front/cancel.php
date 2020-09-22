@@ -52,10 +52,6 @@ class Ps_CheckoutCancelModuleFrontController extends ModuleFrontController
                 $orderID
             ));
 
-            //@todo remove cookie
-            $this->context->cookie->__unset('ps_checkout_orderId');
-            $this->context->cookie->__unset('ps_checkout_fundingSource');
-
             $response = new Response(
                 sprintf('The payment  with orderID : %s have been canceled successfully.', $orderID),
                 Response::HTTP_OK,
