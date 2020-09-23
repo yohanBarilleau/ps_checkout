@@ -1,2 +1,8 @@
 imports:
   - { resource: ../common.yml }
+
+services:
+  ps_checkout.paypal.handler:
+    class: 'PrestaShop\Module\PrestashopCheckout\PayPal\PayPalHandler'
+    arguments:
+      - '@ps_checkout.logger'

@@ -19,6 +19,9 @@
  */
 
 use PrestaShop\Module\PrestashopCheckout\Exception\PsCheckoutException;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * This controller receive ajax call to capture/authorize payment and create a PrestaShop Order
@@ -37,13 +40,7 @@ class Ps_CheckoutValidateModuleFrontController extends ModuleFrontController
      */
     public function postProcess()
     {
-        header('content-type:application/json');
-
         try {
-            if (false === $this->checkIfContextIsValid()) {
-                throw new PsCheckoutException('The context is not valid', PsCheckoutException::PRESTASHOP_CONTEXT_INVALID);
-            }
-
             if (false === $this->checkIfPaymentOptionIsAvailable()) {
                 throw new PsCheckoutException('This payment method is not available.', PsCheckoutException::PRESTASHOP_PAYMENT_UNAVAILABLE);
             }
@@ -54,19 +51,11 @@ class Ps_CheckoutValidateModuleFrontController extends ModuleFrontController
                 throw new PsCheckoutException('Unable to load Customer', PsCheckoutException::PRESTASHOP_CONTEXT_INVALID);
             }
 
-            $bodyContent = file_get_contents('php://input');
+            $request = Request::createFromGlobals();
 
-            if (empty($bodyContent)) {
-                throw new PsCheckoutException('Body cannot be empty', PsCheckoutException::PSCHECKOUT_VALIDATE_BODY_EMPTY);
-            }
+            $orderID = $request->get('orderID');
 
-            $bodyValues = json_decode($bodyContent, true);
-
-            if (empty($bodyValues)) {
-                throw new PsCheckoutException('Body cannot be empty', PsCheckoutException::PSCHECKOUT_VALIDATE_BODY_EMPTY);
-            }
-
-            if (empty($bodyValues['orderID']) || false === Validate::isGenericName($bodyValues['orderID'])) {
+            if (empty($orderID) || false === Validate::isGenericName($orderID)) {
                 throw new PsCheckoutException('PayPal Order identifier invalid', PsCheckoutException::PAYPAL_ORDER_IDENTIFIER_MISSING);
             }
 
@@ -75,10 +64,13 @@ class Ps_CheckoutValidateModuleFrontController extends ModuleFrontController
             // @todo refactor this
             $apiOrder = new PrestaShop\Module\PrestashopCheckout\Api\Payment\Order(\Context::getContext()->link);
 
+            /** @var \PrestaShop\Module\PrestashopCheckout\Repository\PaypalAccountRepository $accountRepository */
+            $accountRepository = $this->module->getService('ps_checkout.repository.paypal.account');
+
             if ('CAPTURE' === Configuration::get('PS_CHECKOUT_INTENT')) {
-                $response = $apiOrder->capture($bodyValues['orderID'], (new PrestaShop\Module\PrestashopCheckout\Repository\PaypalAccountRepository())->getMerchantId());
+                $response = $apiOrder->capture($orderID, $accountRepository->getMerchantId());
             } else {
-                $response = $apiOrder->authorize($bodyValues['orderID'], (new PrestaShop\Module\PrestashopCheckout\Repository\PaypalAccountRepository())->getMerchantId());
+                $response = $apiOrder->authorize($orderID, $accountRepository->getMerchantId());
             }
 
             $psCheckoutCartCollection = new PrestaShopCollection('PsCheckoutCart');
@@ -120,14 +112,8 @@ class Ps_CheckoutValidateModuleFrontController extends ModuleFrontController
                 $customer->secure_key
             );
 
-            //@todo remove cookie
-            $this->context->cookie->__unset('ps_checkout_orderId');
-            $this->context->cookie->__unset('ps_checkout_fundingSource');
-
-            echo json_encode([
-                'status' => true,
-                'httpCode' => 200,
-                'body' => [
+            $jsonResponse = new JsonResponse(
+                [
                     'paypal_status' => $response['body']['status'],
                     'paypal_order' => $response['body']['id'],
                     'paypal_transaction' => $transaction,
@@ -135,20 +121,16 @@ class Ps_CheckoutValidateModuleFrontController extends ModuleFrontController
                     'id_module' => (int) $this->module->id,
                     'id_order' => (int) $this->module->currentOrder,
                     'secure_key' => $customer->secure_key,
-                ],
-                'exceptionCode' => null,
-                'exceptionMessage' => null,
-            ]);
+                    'message' => sprintf('The order  with orderID : %s have been validated successfully.', $response['body']['id']),
+                ]
+            );
+            $jsonResponse->send();
         } catch (Exception $exception) {
-            header('HTTP/1.0 400 Bad Request');
-
-            echo json_encode([
-                'status' => false,
-                'httpCode' => 400,
-                'body' => '',
-                'exceptionCode' => $exception->getCode(),
-                'exceptionMessage' => $exception->getMessage(),
-            ]);
+            $response = new JsonResponse(
+                sprintf('An error occurred during the validate action : %s (code %s)',$exception->getMessage(), $exception->getCode()),
+                Response::HTTP_BAD_REQUEST
+            );
+            $response->send();
         }
 
         exit;

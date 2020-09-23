@@ -18,41 +18,52 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
  */
 
+namespace PrestaShop\Module\PrestashopCheckout\PayPal;
+
+
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * This controller receive ajax call on customer canceled payment
- */
-class Ps_CheckoutCancelModuleFrontController extends ModuleFrontController
+class PayPalHandler
 {
     /**
-     * @var Ps_checkout
+     * @var LoggerInterface
      */
-    public $module;
+    private $logger;
 
     /**
-     * @see FrontController::postProcess()
+     * @param LoggerInterface $logger
      */
-    public function postProcess()
+    public function __construct( LoggerInterface $logger)
     {
-        try{
-            $request = Request::createFromGlobals();
+        $this->logger = $logger;
+    }
 
-            /** @var \PrestaShop\Module\PrestashopCheckout\PayPal\PayPalHandler $ppHandler */
-            $ppHandler = $this->module->getService('ps_checkout.paypal.handler');
+    /**
+     * @param Request $request
+     *
+     * @return Response
+     *
+     * @throws \Exception
+     */
+    public function cancel(Request $request)
+    {
+        $orderID = $request->get('orderID');
 
-            $response = $ppHandler->cancel($request);
-            $response->send();
-        } catch(\Exception $exception) {
-            $response = new Response(
-                sprintf('An error occurred during the cancel action : %s',$exception->getMessage()),
-                Response::HTTP_INTERNAL_SERVER_ERROR,
-                ['content-type' => 'text/html']
-            );
-            $response->send();
+        if ($orderID === null) {
+            throw new \Exception("orderId cannot be null");
         }
 
-        exit;
+        $this->logger->info(sprintf(
+            'Customer canceled payment - PayPal Order %s',
+            $orderID
+        ));
+
+        return new Response(
+            sprintf('The payment  with orderID : %s have been canceled successfully.', $orderID),
+            Response::HTTP_OK,
+            ['content-type' => 'text/html']
+        );
     }
 }

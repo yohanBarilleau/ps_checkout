@@ -19,6 +19,9 @@
  */
 
 use PrestaShop\Module\PrestashopCheckout\Exception\PsCheckoutException;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * This controller receive ajax call on customer click on a payment button
@@ -37,12 +40,7 @@ class Ps_CheckoutCheckModuleFrontController extends ModuleFrontController
      */
     public function postProcess()
     {
-        header('content-type:application/json');
         try {
-            if (false === $this->checkIfContextIsValid()) {
-                throw new PsCheckoutException('The context is not valid', PsCheckoutException::PRESTASHOP_CONTEXT_INVALID);
-            }
-
             if (false === $this->checkIfPaymentOptionIsAvailable()) {
                 throw new PsCheckoutException('This payment method is not available.', PsCheckoutException::PRESTASHOP_PAYMENT_UNAVAILABLE);
             }
@@ -53,19 +51,15 @@ class Ps_CheckoutCheckModuleFrontController extends ModuleFrontController
                 throw new PsCheckoutException('Customer is not loaded yet');
             }
 
-            $bodyContent = file_get_contents('php://input');
+            $request = Request::createFromGlobals();
 
-            if (empty($bodyContent)) {
-                throw new PsCheckoutException('Payload invalid', PsCheckoutException::PSCHECKOUT_WEBHOOK_BODY_EMPTY);
+            $fundingSource = $request->get('fundingSource');
+
+            if (empty($fundingSource)) {
+                throw new PsCheckoutException('FundingSource cannot be null', PsCheckoutException::PSCHECKOUT_WEBHOOK_BODY_EMPTY);
             }
 
-            $bodyValues = json_decode($bodyContent, true);
-
-            if (empty($bodyValues)) {
-                throw new PsCheckoutException('Payload invalid', PsCheckoutException::PSCHECKOUT_WEBHOOK_BODY_EMPTY);
-            }
-
-            if (false === empty($bodyValues['fundingSource']) && false !== Validate::isGenericName($bodyValues['fundingSource'])) {
+            if (false !== Validate::isGenericName($fundingSource)) {
                 $psCheckoutCartCollection = new PrestaShopCollection('PsCheckoutCart');
                 $psCheckoutCartCollection->where('id_cart', '=', (int) $this->context->cart->id);
 
@@ -73,53 +67,29 @@ class Ps_CheckoutCheckModuleFrontController extends ModuleFrontController
                 $psCheckoutCart = $psCheckoutCartCollection->getFirst();
 
                 if (false !== $psCheckoutCart) {
-                    $psCheckoutCart->paypal_funding = $bodyValues['fundingSource'];
+                    $psCheckoutCart->paypal_funding = $fundingSource;
                     $psCheckoutCart->update();
                 } else {
                     $psCheckoutCart = new PsCheckoutCart();
                     $psCheckoutCart->id_cart = (int) $this->context->cart->id;
-                    $psCheckoutCart->paypal_funding = $bodyValues['fundingSource'];
+                    $psCheckoutCart->paypal_funding = $fundingSource;
                     $psCheckoutCart->add();
                 }
-
-                $this->context->cookie->__set('ps_checkout_fundingSource', $bodyValues['fundingSource']);
             }
 
-            echo json_encode([
-                'status' => true,
-                'httpCode' => 200,
-                'body' => $bodyValues,
-                'exceptionCode' => null,
-                'exceptionMessage' => null,
-            ]);
+            $response = new JsonResponse(
+                sprintf('The payment  with cart : %s have been checked successfully.', $this->context->cart->id)
+            );
+            $response->send();
         } catch (Exception $exception) {
-            header('HTTP/1.0 400 Bad Request');
-
-            echo json_encode([
-                'status' => false,
-                'httpCode' => 400,
-                'body' => '',
-                'exceptionCode' => $exception->getCode(),
-                'exceptionMessage' => $exception->getMessage(),
-            ]);
+            $response = new JsonResponse(
+                sprintf('An error occurred during the check action : %s (code %s)',$exception->getMessage(), $exception->getCode()),
+                Response::HTTP_BAD_REQUEST
+            );
+            $response->send();
         }
 
         exit;
-    }
-
-    /**
-     * Check if the context is valid
-     *
-     * @todo Move to main module class
-     *
-     * @return bool
-     */
-    private function checkIfContextIsValid()
-    {
-        return true === Validate::isLoadedObject($this->context->cart)
-            && true === Validate::isUnsignedInt($this->context->cart->id_customer)
-            && true === Validate::isUnsignedInt($this->context->cart->id_address_delivery)
-            && true === Validate::isUnsignedInt($this->context->cart->id_address_invoice);
     }
 
     /**
