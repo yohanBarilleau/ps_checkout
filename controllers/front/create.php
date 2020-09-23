@@ -23,6 +23,8 @@ use PrestaShop\Decimal\Operation\Rounding;
 use PrestaShop\Module\PrestashopCheckout\Api\Payment\Order;
 use PrestaShop\Module\PrestashopCheckout\Exception\PsCheckoutException;
 use PrestaShop\Module\PrestashopCheckout\Repository\PaypalAccountRepository;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * This controller receive ajax call to create a PayPal Order
@@ -41,13 +43,7 @@ class Ps_CheckoutCreateModuleFrontController extends ModuleFrontController
      */
     public function postProcess()
     {
-        header('content-type:application/json');
-
         try {
-            if (false === $this->checkIfContextIsValid()) {
-                throw new PsCheckoutException('The context is not valid', PsCheckoutException::PRESTASHOP_CONTEXT_INVALID);
-            }
-
             if (false === $this->checkIfPaymentOptionIsAvailable()) {
                 throw new PsCheckoutException('This payment method is not available.', PsCheckoutException::PRESTASHOP_PAYMENT_UNAVAILABLE);
             }
@@ -60,16 +56,11 @@ class Ps_CheckoutCreateModuleFrontController extends ModuleFrontController
 
             if (false !== $psCheckoutCart && false === empty($psCheckoutCart->paypal_order)) {
                 // @todo Check if PayPal Order status before reuse it
-                header('content-type:application/json');
-                echo json_encode([
-                    'status' => true,
-                    'httpCode' => 200,
-                    'body' => [
-                        'orderID' => $psCheckoutCart->paypal_order,
-                    ],
-                    'exceptionCode' => null,
-                    'exceptionMessage' => null,
-                ]);
+                $jsonResponse = new JsonResponse(
+                    sprintf('The order  with orderID : %s have been created successfully.', $psCheckoutCart->paypal_order),
+                    Response::HTTP_OK
+                );
+                $jsonResponse->send();
                 exit;
             }
 
@@ -95,46 +86,20 @@ class Ps_CheckoutCreateModuleFrontController extends ModuleFrontController
             $psCheckoutCart->paypal_token_expire = (new DateTime())->modify('+3550 seconds')->format('Y-m-d H:i:s');
             $psCheckoutCart->save();
 
-            //@todo remove cookie
-            $this->context->cookie->__set('ps_checkout_orderId', $response['body']['id']);
-
-            echo json_encode([
-                'status' => true,
-                'httpCode' => 200,
-                'body' => [
-                    'orderID' => $response['body']['id'],
-                ],
-                'exceptionCode' => null,
-                'exceptionMessage' => null,
-            ]);
+            $jsonResponse = new JsonResponse(
+                sprintf('The order  with orderID : %s have been created successfully.', $response['body']['id']),
+                Response::HTTP_OK
+            );
+            $jsonResponse->send();
         } catch (Exception $exception) {
-            header('HTTP/1.0 400 Bad Request');
-
-            echo json_encode([
-                'status' => false,
-                'httpCode' => 400,
-                'body' => '',
-                'exceptionCode' => $exception->getCode(),
-                'exceptionMessage' => $exception->getMessage(),
-            ]);
+            $jsonResponse = new JsonResponse(
+                sprintf('An error occurred during the creation action : %s (code %s)',$exception->getMessage(), $exception->getCode()),
+                Response::HTTP_BAD_REQUEST
+            );
+            $jsonResponse->send();
         }
 
         exit;
-    }
-
-    /**
-     * Check if the context is valid
-     *
-     * @todo Move to main module class
-     *
-     * @return bool
-     */
-    private function checkIfContextIsValid()
-    {
-        return true === Validate::isLoadedObject($this->context->cart)
-            && true === Validate::isUnsignedInt($this->context->cart->id_customer)
-            && true === Validate::isUnsignedInt($this->context->cart->id_address_delivery)
-            && true === Validate::isUnsignedInt($this->context->cart->id_address_invoice);
     }
 
     /**
