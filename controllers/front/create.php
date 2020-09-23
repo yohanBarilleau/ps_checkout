@@ -87,8 +87,7 @@ class Ps_CheckoutCreateModuleFrontController extends ModuleFrontController
             $psCheckoutCart->save();
 
             $jsonResponse = new JsonResponse(
-                sprintf('The order  with orderID : %s have been created successfully.', $response['body']['id']),
-                Response::HTTP_OK
+                sprintf('The order  with orderID : %s have been created successfully.', $response['body']['id'])
             );
             $jsonResponse->send();
         } catch (Exception $exception) {

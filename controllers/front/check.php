@@ -56,7 +56,7 @@ class Ps_CheckoutCheckModuleFrontController extends ModuleFrontController
             $fundingSource = $request->get('fundingSource');
 
             if (empty($fundingSource)) {
-                throw new PsCheckoutException('Payload invalid', PsCheckoutException::PSCHECKOUT_WEBHOOK_BODY_EMPTY);
+                throw new PsCheckoutException('FundingSource cannot be null', PsCheckoutException::PSCHECKOUT_WEBHOOK_BODY_EMPTY);
             }
 
             if (false !== Validate::isGenericName($fundingSource)) {
@@ -78,13 +78,12 @@ class Ps_CheckoutCheckModuleFrontController extends ModuleFrontController
             }
 
             $response = new JsonResponse(
-                sprintf('The payment  with cart : %s have been checked successfully.', $this->context->cart->id),
-                Response::HTTP_OK
+                sprintf('The payment  with cart : %s have been checked successfully.', $this->context->cart->id)
             );
             $response->send();
         } catch (Exception $exception) {
             $response = new JsonResponse(
-                sprintf('An error occurred during the checked action : %s (code %s)',$exception->getMessage(), $exception->getCode()),
+                sprintf('An error occurred during the check action : %s (code %s)',$exception->getMessage(), $exception->getCode()),
                 Response::HTTP_BAD_REQUEST
             );
             $response->send();

@@ -46,7 +46,7 @@ class Ps_CheckoutCancelModuleFrontController extends ModuleFrontController
             $response->send();
         } catch(\Exception $exception) {
             $response = new Response(
-                sprintf('An error occurred during the canceled action : %s',$exception->getMessage()),
+                sprintf('An error occurred during the cancel action : %s',$exception->getMessage()),
                 Response::HTTP_INTERNAL_SERVER_ERROR,
                 ['content-type' => 'text/html']
             );
